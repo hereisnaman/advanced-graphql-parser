@@ -1,0 +1,94 @@
+import { Language, Rule, RuleConstraint } from './language';
+import { Lexer, Source } from 'graphql';
+
+interface ParserRule extends RuleConstraint {
+  nodeRoot?: boolean;
+}
+
+interface ParserState {
+  rules: ParserRule[];
+  depth: Number;
+}
+
+class Parser {
+  constructor({ state: ParserState, source: string }) {
+    this.state = state;
+    this.lexer = new Lexer(new Source(source));
+  }
+
+  static intialState(): ParserState {
+    return {
+      rules: [Languages.document],
+      depth: 1,
+    };
+  }
+
+  parseToken() {
+    const rule = this.getNextRule();
+
+    switch (this.getRuleKind(rule)) {
+      case 'RuleName':
+        this.popRule();
+        this.pushRule(Language.rules[rule]);
+        return this.parseToken();
+      case 'ListOfType':
+        rule.nodeRoot = true;
+        this.state.depth++;
+        this.pushRule(Language.rules[rule.listOfType]);
+        return this.parseToken();
+      case 'TokenConstraint':
+        const token = this.lookAhead();
+
+        if (rule.ofValue && token.value !== rule.ofValue)
+          return { kind: 'Invalid' };
+        if (rule.oneOf && !rule.oneOf.includes(token.value))
+          return { kind: 'Invalid' };
+
+        break;
+    }
+  }
+
+  private getNextRule(): ParserRule {
+    return this.state.rules[this.state.rule.length - 1];
+  }
+
+  private getRuleKind(rule: Rule) {
+    if (Array.isArray(rule)) {
+      return 'ConstraintsSet';
+    }
+
+    if (typeof rule === 'string') {
+      return 'RuleName';
+    }
+
+    if (Object.hasOwnProperty(rule, 'ofType')) {
+      return 'OfType';
+    }
+
+    if (Object.hasOwnProperty(rule, 'listofType')) {
+      return 'ListOfType';
+    }
+
+    if (Object.hasOwnProperty(rule, 'peek')) {
+      return 'PeekConstraint';
+    }
+
+    if (Object.hasOwnProperty(rule, 'token')) {
+      return 'TokenConstraint';
+    }
+
+    return 'Invalid';
+  }
+
+  private popRule(): ParserRule {
+    return this.state.rules.pop();
+  }
+
+  private pushRule(rule: Rule) {
+    switch (this.getRuleKind(rule)) {
+      case 'RuleName':
+        this.pushRule(Language.rules[rule]);
+        break;
+    }
+  }
+}

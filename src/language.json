@@ -1,0 +1,750 @@
+{
+  "rules": {
+    "Name": { "token": "Name" },
+
+    "Document": { "listOfType": "Definition" },
+    "Definition": {
+      "peek": [
+        {
+          "ifCondition": {
+            "token": "Name",
+            "oneOf": ["query", "mutation", "subscription"]
+          },
+          "expect": "OperationDefinition"
+        },
+        {
+          "ifCondition": { "token": "Name", "ofValue": "fragment" },
+          "expect": "FragmentDefinition"
+        },
+        {
+          "ifCondition": {
+            "token": "Name",
+            "oneOf": [
+              "schema",
+              "scalar",
+              "type",
+              "interface",
+              "union",
+              "enum",
+              "input",
+              "directive"
+            ]
+          },
+          "expect": "TypeSystemDefinition"
+        },
+        {
+          "ifCondition": { "token": "Name", "ofValue": "extend" },
+          "expect": "TypeSystemExtension"
+        },
+        {
+          "ifCondition": { "token": "{" },
+          "expect": "OperationDefinition"
+        },
+        {
+          "ifCondition": { "expect": "StringValue" },
+          "expect": "TypeSystemDefinition"
+        }
+      ]
+    },
+
+    "OperationDefinition": {
+      "peek": [
+        {
+          "ifCondition": { "token": "{" },
+          "expect": "SelectionSet"
+        },
+        {
+          "expect": [
+            "OperationType",
+            { "ofType": "Name", "optional": true, "saveAs": "name" },
+            { "ofType": "VariableDefinitions", "optional": true },
+            { "ofType": "Directives", "optional": true },
+            "SelectionSet"
+          ]
+        }
+      ]
+    },
+    "OperationType": {
+      "token": "Name",
+      "oneOf": ["query", "mutation", "subscription"]
+    },
+
+    "SelectionSet": [
+      { "token": "{" },
+      { "listOfType": "Selection" },
+      { "token": "}" }
+    ],
+    "Selection": {
+      "peek": [
+        {
+          "ifCondition": { "token": "..." },
+          "expect": "Fragment"
+        },
+        {
+          "expect": "Field"
+        }
+      ]
+    },
+
+    "Field": [
+      { "ofType": "Alias", "optional": true },
+      "Name",
+      { "ofType": "Arguments", "optional": true },
+      { "ofType": "Directives", "optional": true },
+      { "ofType": "SelectionSet", "optional": true }
+    ],
+
+    "Arguments": [
+      { "token": "(" },
+      { "listOfType": "Argument" },
+      { "token": ")" }
+    ],
+    "Argument": ["Name", { "token": ":" }, "Value"],
+
+    "Alias": ["Name", { "token": ":" }],
+
+    "Fragment": {
+      "peek": [
+        {
+          "ifCondition": { "token": "Name", "ofValue": "on" },
+          "expect": "InlineFragment"
+        },
+        {
+          "expect": "FragmentSpread"
+        }
+      ]
+    },
+    "FragmentSpread": [
+      { "token": "..." },
+      "FragmentName",
+      { "ofType": "Directives", "optional": true }
+    ],
+    "FragmentDefinition": [
+      { "token": "Name", "value": "fragment" },
+      "FragmentName",
+      "TypeCondition",
+      { "ofType": "Directives", "optional": true },
+      "SelectionSet"
+    ],
+    "FragmentName": {
+      "ofType": "Name",
+      "butNot": { "token": "Name", "value": "on" }
+    },
+
+    "TypeCondition": [{ "token": "Name", "value": "on" }, "NamedType"],
+
+    "InlineFragment": [
+      { "token": "..." },
+      { "ofType": "TypeCondition", "optional": true },
+      { "ofType": "Directives", "optional": true },
+      "SelectionSet"
+    ],
+
+    "Value": {
+      "peek": [
+        {
+          "ifCondition": { "token": "$" },
+          "expect": "Variable"
+        },
+        {
+          "ifCondition": "IntValue",
+          "expect": "IntValue"
+        },
+        {
+          "ifCondition": "FloatValue",
+          "expect": "FloatValue"
+        },
+        {
+          "ifCondition": "BooleanValue",
+          "expect": "BooleanValue"
+        },
+        {
+          "ifCondition": "StringValue",
+          "expect": "StringValue"
+        },
+        {
+          "ifCondition": "NullValue",
+          "expect": "NullValue"
+        },
+        {
+          "ifCondition": "[",
+          "expect": "ListValue"
+        },
+        {
+          "ifCondition": "{",
+          "expect": "ObjectValue"
+        }
+      ]
+    },
+
+    "ConstValue": {
+      "peek": [
+        {
+          "ifCondition": "IntValue",
+          "expect": "IntValue"
+        },
+        {
+          "ifCondition": "FloatValue",
+          "expect": "FloatValue"
+        },
+        {
+          "ifCondition": "BooleanValue",
+          "expect": "BooleanValue"
+        },
+        {
+          "ifCondition": "StringValue",
+          "expect": "StringValue"
+        },
+        {
+          "ifCondition": "NullValue",
+          "expect": "NullValue"
+        },
+        {
+          "ifCondition": "[",
+          "expect": "ConstListValue"
+        },
+        {
+          "ifCondition": "{",
+          "expect": "ObjectValue"
+        }
+      ]
+    },
+
+    "IntValue": { "token": "Int" },
+
+    "FloatValue": { "token": "Float" },
+
+    "StringValue": {
+      "peek": [
+        {
+          "ifCondition": { "token": "String" },
+          "expect": "String"
+        },
+        {
+          "ifCondition": { "token": "BlockString" },
+          "expect": "BlockString"
+        }
+      ]
+    },
+
+    "BooleanValue": { "token": "Name", "oneOf": ["true", "false"] },
+
+    "NullValue": { "token": "Name", "ofValue": "null" },
+
+    "EnumValue": { "ofType": "Name", "butNot": ["BooleanValue", "NullValue"] },
+
+    "ListValue": [
+      { "token": "[" },
+      { "listOfType": "Value", "optional": true },
+      { "token": "]" }
+    ],
+
+    "ConstListValue": [
+      { "token": "[" },
+      { "listOfType": "ConstValue", "optional": true },
+      { "token": "]" }
+    ],
+
+    "ObjectValue": [
+      { "token": "{" },
+      { "listOfType": "ObjectField", "optional": true },
+      { "token": "}" }
+    ],
+    "ObjectField": ["Name", { "token": ":" }, { "ofType": "ConstValue" }],
+
+    "Variable": [{ "token": "$" }, "Name"],
+    "VariableDefinitions": [
+      { "token": "(" },
+      { "listOfType": "VariableDefinition" },
+      { "token": ")" }
+    ],
+    "VariableDefinition": [
+      "Variable",
+      { "token": ":" },
+      "Type",
+      { "ofType": "DefaultValue", "optional": true }
+    ],
+    "DefaultValue": [{ "token": "=" }, "ConstValue"],
+
+    "Type": {
+      "peek": [
+        {
+          "ifCondition": { "token": "[" },
+          "expect": "ListType"
+        },
+        {
+          "ifCondition": { "token": "Name" },
+          "expect": "NamedType"
+        }
+      ]
+    },
+    "NamedType": "Name",
+    "ListType": [{ "token": "[" }, { "listOfType": "Type" }, { "token": "]" }],
+    "NonNullType": {
+      "peek": [
+        {
+          "ifCondition": { "token": "[" },
+          "expect": ["ListType", { "token": "!" }]
+        },
+        {
+          "ifCondition": { "token": "Name" },
+          "expect": ["NamedType", { "token": "!" }]
+        }
+      ]
+    },
+
+    "Directives": { "listOfType": "Directive" },
+    "Directive": [
+      { "token": "@" },
+      "Name",
+      { "ofType": "Arguments", "optional": true }
+    ],
+
+    "TypeSystemDefinition": {
+      "peek": [
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "schema",
+            "expect": "SchemaDefinition"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "scalar",
+            "expect": "ScalarTypeDefinition"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "type",
+            "expect": "ObjectTypeDefinition"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "interface",
+            "expect": "InterfaceTypeDefinition"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "union",
+            "expect": "UnionTypeDefinition"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "enum",
+            "expect": "EnumTypeDefinition"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "input",
+            "expect": "InputObjectTypeDefinition"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "directive",
+            "expect": "DirectiveDefinition"
+          }
+        }
+      ]
+    },
+
+    "TypeSystemExtension": {
+      "peek": [
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "schema",
+            "expect": "SchemaExtension"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "scalar",
+            "expect": "ScalarTypeExtension"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "type",
+            "expect": "ObjectTypeExtension"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "interface",
+            "expect": "InterfaceTypeExtension"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "union",
+            "expect": "UnionTypeExtension"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "enum",
+            "expect": "EnumTypeExtension"
+          }
+        },
+        {
+          "ifCondition": {
+            "target": "Name",
+            "ofValue": "input",
+            "expect": "InputObjectTypeExtension"
+          }
+        }
+      ]
+    },
+
+    "SchemaDefinition": [
+      { "token": "Name", "ofValue": "schema" },
+      { "ofType": "Directives", "optional": true },
+      { "token": "{" },
+      { "listOfType": "RootOperationTypeDefinition" },
+      { "token": "}" }
+    ],
+    "RootOperationTypeDefinition": ["OperationType", "NamedType"],
+
+    "SchemaExtension": [
+      { "token": "Name", "ofValue": "extend" },
+      { "token": "Name", "ofValue": "schema" },
+      {
+        "peek": [
+          {
+            "ifCondition": { "token": "{" },
+            "expect": [
+              { "token": "{" },
+              { "listOfType": "OperationTypeDefinition" },
+              { "token": "}" }
+            ],
+            "close": true
+          },
+          {
+            "ifCondition": { "token": "@" },
+            "expect": "Directives"
+          }
+        ]
+      },
+      {
+        "ofType": [
+          { "token": "{" },
+          { "listOfType": "OperationTypeDefinition" },
+          { "token": "}" }
+        ],
+        "optional": true
+      }
+    ],
+
+    "Description": "StringValue",
+
+    "ScalarTypeDefinition": [
+      { "ofType": "Description", "optional": true },
+      { "token": "Name", "ofValue": "scalar" },
+      "Name",
+      { "ofType": "Directives", "optional": true }
+    ],
+
+    "ScalarTypeExtension": [
+      { "token": "Name", "ofValue": "extend" },
+      { "token": "Name", "ofValue": "scalar" },
+      "Name",
+      "Directives"
+    ],
+
+    "ObjectTypeDefinition": [
+      { "ofType": "Description", "optional": true },
+      { "token": "Name", "ofValue": "type" },
+      "Name",
+      { "ofType": "ImplementsInterfaces", "optional": true },
+      { "ofType": "Directives", "optional": true },
+      { "ofType": "FieldsDefinition", "optional": true }
+    ],
+    "ImplementsInterfaces": {
+      "oneOfType": [
+        [
+          { "token": "Name", "ofValue": "implements" },
+          { "token": "&", "optional": true },
+          "NamedType"
+        ],
+        ["ImplementsInterfaces", { "token": "&" }, "NamedType"]
+      ]
+    },
+    "FieldsDefinition": [
+      { "token": "{" },
+      { "listOfType": "FieldDefinition" },
+      { "token": "}" }
+    ],
+    "FieldDefinition": [
+      { "ofType": "Description", "optional": true },
+      "Name",
+      { "ofType": "ArgumentsDefinition", "optional": true },
+      { "token": ":" },
+      "Type",
+      { "ofType": "Directives", "optional": true }
+    ],
+
+    "ArgumentsDefinition": [
+      { "token": "(" },
+      { "listOfType": "InputValueDefinition" },
+      { "token": ")" }
+    ],
+    "InputValueDefinition": [
+      { "ofType": "Description", "optional": true },
+      "Name",
+      { "token": ":" },
+      "Type",
+      { "ofType": "DefaultValue", "optional": true },
+      { "ofType": "Directives", "optional": true }
+    ],
+
+    "ObjectTypeExtension": [
+      { "token": "Name", "ofValue": "extend" },
+      { "token": "Name", "ofValue": "type" },
+      "Name",
+      {
+        "peek": [
+          {
+            "ifCondition": { "token": "{" },
+            "expect": [
+              { "token": "{" },
+              { "listOfType": "OperationTypeDefinition" },
+              { "token": "}" }
+            ],
+            "end": true
+          },
+          {
+            "ifCondition": { "token": "@" },
+            "expect": "Directives"
+          }
+        ]
+      },
+      {
+        "ofType": [
+          { "token": "{" },
+          { "listOfType": "OperationTypeDefinition" },
+          { "token": "}" }
+        ],
+        "optional": true
+      }
+    ],
+    "ObjectTypeExtension": {
+      "oneOfType": [
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "type" },
+          "Name",
+          { "ofType": "ImplementsInterfaces", "optional": true },
+          { "ofType": "Directives", "optional": true },
+          "FieldsDefinition"
+        ],
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "type" },
+          "Name",
+          { "ofType": "ImplementsInterfaces", "optional": true },
+          "Directives"
+        ],
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "type" },
+          "Name",
+          "ImplementsInterfaces"
+        ]
+      ]
+    },
+
+    "InterfaceTypeDefinition": [
+      { "ofType": "Description", "optional": true },
+      { "keyword": "interface" },
+      "Name",
+      { "ofType": "Directives", "optional": true },
+      { "ofType": "FieldsDefinition", "optional": true }
+    ],
+
+    "InterfaceTypeExtension": {
+      "oneOfType": [
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "interface" },
+          "Name",
+          { "ofType": "Directives", "optional": true },
+          "FieldsDefinition"
+        ],
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "interface" },
+          "Name",
+          "Directives"
+        ]
+      ]
+    },
+
+    "UnionTypeDefinition": [
+      { "ofType": "Description", "optional": true },
+      { "token": "Name", "ofValue": "union" },
+      "Name",
+      { "ofType": "Directives", "optional": true },
+      { "ofType": "UnionMemberTypes", "optional": true }
+    ],
+    "UnionMemberTypes": {
+      "oneOfType": [
+        [{ "token": "=" }, { "token": "|", "optional": true }, "NamedType"],
+        ["UnionMemberTypes", { "token": "|" }, "NamedType"]
+      ]
+    },
+
+    "UnionTypeExtension": {
+      "oneOfType": [
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "union" },
+          "Name",
+          { "ofType": "Directives", "optional": true },
+          "UnionMemberTypes"
+        ],
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "union" },
+          "Name",
+          "Directives"
+        ]
+      ]
+    },
+
+    "EnumTypeDefinition": [
+      { "ofType": "Description", "optional": true },
+      { "token": "Name", "ofValue": "enum" },
+      "Name",
+      { "ofType": "Directives", "optional": true },
+      { "ofType": "EnumValuesDefinition", "optional": true }
+    ],
+    "EnumValuesDefinition": [
+      { "token": "{" },
+      { "listOfType": "EnumValueDefinition" },
+      { "token": "}" }
+    ],
+    "EnumValueDefinition": [
+      { "ofType": "Description", "optional": true },
+      "EnumValue",
+      { "ofType": "Directives", "optional": true }
+    ],
+
+    "EnumTypeExtension": {
+      "oneOfType": [
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "enum" },
+          "Name",
+          { "ofType": "Directives", "optional": true },
+          "EnumValuesDefinition"
+        ],
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "enum" },
+          "Name",
+          "Directives"
+        ]
+      ]
+    },
+
+    "InputObjectTypeDefinition": [
+      { "ofType": "Description", "optional": true },
+      { "token": "Name", "ofValue": "input" },
+      "Name",
+      { "ofType": "Directives", "optional": true },
+      { "ofType": "InputFieldsDefinition", "optional": true }
+    ],
+    "InputFieldsDefinition": [
+      { "token": "{" },
+      { "listOfType": "InputValueDefinition" },
+      { "token": "}" }
+    ],
+
+    "InputObjectTypeExtension": {
+      "oneOfType": [
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "input" },
+          "Name",
+          { "ofType": "Directives", "optional": true },
+          "InputFieldsDefinition"
+        ],
+        [
+          { "token": "Name", "ofValue": "extend" },
+          { "token": "Name", "ofValue": "input" },
+          "Name",
+          "Directives"
+        ]
+      ]
+    },
+
+    "DirectiveDefinition": [
+      { "ofType": "Description", "optional": true },
+      { "token": "Name", "ofValue": "directive" },
+      { "token": "@" },
+      "Name",
+      { "ofType": "ArgumentsDefinition", "optional": true },
+      { "token": "Name", "ofValue": "on" },
+      "DirectiveLocations"
+    ],
+    "DirectiveLocations": {
+      "oneOfType": [
+        [{ "token": "|", "optional": true }, "DirectiveLocation"],
+        ["DirectiveLocations", { "token": "|" }, "DirectiveLocation"]
+      ]
+    },
+    "DirectiveLocation": {
+      "oneOfType": [
+        "ExecutableDirectiveLocation",
+        "TypeSystemDirectiveLocation"
+      ]
+    },
+    "ExecutableDirectiveLocation": {
+      "token": "Name",
+      "oneOf": [
+        "QUERY",
+        "MUTATION",
+        "SUBSCRIPTION",
+        "FIELD",
+        "FRAGMENT_DEFINITION",
+        "FRAGMENT_SPREAD",
+        "INLINE_FRAGMENT"
+      ]
+    },
+    "TypeSystemDirectiveLocation": {
+      "token": "Name",
+      "oneOf": [
+        "SCHEMA",
+        "SCALAR",
+        "OBJECT",
+        "FIELD_DEFINITION",
+        "ARGUMENT_DEFINITION",
+        "INTERFACE",
+        "UNION",
+        "ENUM",
+        "ENUM_VALUE",
+        "INPUT_OBJECT",
+        "INPUT_FIELD_DEFINITION"
+      ]
+    }
+  }
+}
