@@ -101,6 +101,9 @@ export class Parser {
     if (!rule) return null;
 
     let token;
+    if (this.lookAhead().kind === '<EOF>') {
+      return { kind: '<EOF>' };
+    }
 
     switch (rule.kind) {
       case RuleKind.TOKEN_CONSTRAINT:
@@ -132,12 +135,13 @@ export class Parser {
       return this.parseToken() || token;
     }
 
-    console.log('returning token: ', token);
+    console.log('returning token: ', token, this.getNextRule());
 
     return token;
   }
 
   private parseTokenConstraint(rule: TokenParserRule) {
+    rule.expanded = true;
     const token = this.lookAhead();
 
     if (!this.matchToken(token, rule)) {
@@ -146,12 +150,26 @@ export class Parser {
 
     this.advanceToken();
 
-    this.state.rules.pop();
+    console.log('popped 7:', this.state.rules.pop());
+
+    const nextRule = this.getNextRule();
+
+    if (
+      nextRule.depth === rule.depth - 1 &&
+      nextRule.expanded &&
+      nextRule.kind === RuleKind.CONSTRAINTS_SET_ROOT
+    )
+      console.log('popped 8:', this.state.rules.pop(), this.state.rules);
 
     return token;
   }
 
   private parseListOfTypeConstraint(rule: ListOfTypeParserRule) {
+    if (rule.expanded) {
+      this.state.rules.pop();
+      return this.parseToken();
+    }
+
     this.pushRule(
       Language.rules[rule.listOfType],
       rule.depth + 1,
@@ -165,6 +183,10 @@ export class Parser {
   }
 
   private parseOfTypeConstraint(rule: OfTypeParserRule) {
+    if (rule.expanded) {
+      this.state.rules.pop();
+      return this.parseToken();
+    }
     this.pushRule(rule.ofType, rule.depth + 1);
     rule.expanded = true;
 
@@ -174,6 +196,10 @@ export class Parser {
   }
 
   private parsePeekConstraint(rule: PeekParserRule) {
+    if (rule.expanded) {
+      this.state.rules.pop();
+      return this.parseToken();
+    }
     while (!rule.matched && rule.index < rule.peek.length - 1) {
       rule.index++;
       const constraint = rule.peek[rule.index];
@@ -200,6 +226,11 @@ export class Parser {
   }
 
   private parseConstraintsSetRule(rule: ConstraintsSetRule) {
+    if (rule.expanded) {
+      this.state.rules.pop();
+      return this.parseToken();
+    }
+
     for (let index = rule.constraints.length - 1; index >= 0; index--) {
       this.pushRule(rule.constraints[index], rule.depth + 1);
     }
@@ -269,7 +300,7 @@ export class Parser {
         const log = console.log;
         global.console.log = (...args) => {
           i++;
-          if (i < 50) {
+          if (i < 80) {
             log(...args);
           }
         };
@@ -280,13 +311,25 @@ export class Parser {
     const poppedRule = this.state.rules.pop();
     console.log('popped4 : ', poppedRule);
 
-    let popped = 0;
-    while (this.getNextRule()?.depth > poppedRule.depth - 1) {
-      console.log('popped5 : ', this.state.rules.pop());
-      popped++;
-    }
+    /*
+    if (
+      poppedRule.expanded &&
+      poppedRule.kind === RuleKind.LIST_OF_TYPE_CONSTRAINT
+    )
+      return;
+      */
 
-    const nextRule = this.getNextRule();
+    let popped = 0;
+    let nextRule = this.getNextRule();
+    while (
+      (poppedRule.kind !== RuleKind.LIST_OF_TYPE_CONSTRAINT ||
+        nextRule?.expanded) &&
+      nextRule?.depth > poppedRule.depth - 1
+    ) {
+      console.log('popped5 : ', this.state.rules.pop(), popped);
+      popped++;
+      nextRule = this.getNextRule();
+    }
 
     if (nextRule && nextRule.expanded) {
       if (nextRule.optional) {

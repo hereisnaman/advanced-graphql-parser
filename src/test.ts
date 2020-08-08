@@ -3,15 +3,23 @@ import { Parser } from './parser';
 
 const parser = new Parser({
   state: { rules: [] as any[] },
-  source: `query SomeQuery {
-    some_field(some_arg: 123)
-  }`,
+  source: `
+    query SomeQuery {
+      some_field(some_arg: 123)
+    }
+    query SomeQuery {
+      some_field(some_arg: 123)
+    }
+  `,
 });
 
 parser.pushRule('Document', 1);
 
 console.log(parser.state);
 const tokens = [];
+
+const log = global.console.log;
+//global.console.log = () => {};
 
 while (
   !tokens.length ||
@@ -24,4 +32,4 @@ while (
   //  console.log(token, parser.state.rules);
 }
 
-console.log(tokens);
+log('final result:', parser.state, tokens);
