@@ -4,7 +4,7 @@ import { Parser } from './parser';
 const parser = new Parser({
   state: { rules: [] as any[] },
   source: `query SomeQuery {
-    some_field(some_arg: "123")
+    some_field(some_arg: 123)
   }`,
 });
 

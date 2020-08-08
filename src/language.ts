@@ -23,6 +23,7 @@ type RuleConstraint =
 interface BaseRuleConstraint {
   butNot?: TokenConstraint | TokenConstraint[];
   optional?: boolean;
+  eatNextOnFail?: boolean;
 }
 
 interface TokenConstraint extends BaseRuleConstraint {

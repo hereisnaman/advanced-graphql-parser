@@ -1,6 +1,8 @@
 {
   "rules": {
     "Name": { "token": "Name" },
+    "String": { "token": "String" },
+    "BlockString": { "token": "BlockString" },
 
     "Document": { "listOfType": "Definition" },
     "Definition": {
@@ -87,8 +89,8 @@
     },
 
     "Field": [
-      { "ofType": "Alias", "optional": true },
-      "Name",
+      { "ofType": "Alias", "optional": true, "eatNextOnFail": true },
+      { "token": "Name" },
       { "ofType": "Arguments", "optional": true },
       { "ofType": "Directives", "optional": true },
       { "ofType": "SelectionSet", "optional": true }
@@ -159,8 +161,12 @@
           "expect": "BooleanValue"
         },
         {
-          "ifCondition": "StringValue",
-          "expect": "StringValue"
+          "ifCondition": "String",
+          "expect": "String"
+        },
+        {
+          "ifCondition": "BlockString",
+          "expect": "BlockString"
         },
         {
           "ifCondition": "NullValue",
@@ -192,8 +198,12 @@
           "expect": "BooleanValue"
         },
         {
-          "ifCondition": "StringValue",
-          "expect": "StringValue"
+          "ifCondition": "String",
+          "expect": "String"
+        },
+        {
+          "ifCondition": "BlockString",
+          "expect": "BlockString"
         },
         {
           "ifCondition": "NullValue",
