@@ -120,7 +120,7 @@
       { "ofType": "Directives", "optional": true }
     ],
     "FragmentDefinition": [
-      { "token": "Name", "value": "fragment" },
+      { "token": "Name", "ofValue": "fragment" },
       "FragmentName",
       "TypeCondition",
       { "ofType": "Directives", "optional": true },
@@ -128,10 +128,10 @@
     ],
     "FragmentName": {
       "ofType": "Name",
-      "butNot": { "token": "Name", "value": "on" }
+      "butNot": { "token": "Name", "ofValue": "on" }
     },
 
-    "TypeCondition": [{ "token": "Name", "value": "on" }, "NamedType"],
+    "TypeCondition": [{ "token": "Name", "ofValue": "on" }, "NamedType"],
 
     "InlineFragment": [
       { "token": "..." },

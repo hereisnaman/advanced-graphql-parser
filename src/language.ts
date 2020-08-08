@@ -1,6 +1,6 @@
-const language: Language = require('./language.json');
+const Language: LanguageType = require('./rules.json');
 
-interface Language {
+interface LanguageType {
   rules: Rules;
 }
 
@@ -8,11 +8,13 @@ interface Rules {
   [name: string]: Rule;
 }
 
-export type RuleName = keyof Rules;
+type RuleName = string;
 
-export type Rule = RuleName | RuleConstraint | (RuleName | RuleConstraint)[];
+type Rule = RuleName | RuleConstraint | ConstraintsSet;
 
-export type RuleConstraint =
+type ConstraintsSet = (RuleName | RuleConstraint)[];
+
+type RuleConstraint =
   | TokenConstraint
   | OfTypeConstraint
   | ListOfTypeConstraint
@@ -23,7 +25,7 @@ interface BaseRuleConstraint {
   optional?: boolean;
 }
 
-export interface TokenConstraint extends BaseRuleConstraint {
+interface TokenConstraint extends BaseRuleConstraint {
   token:
     | '!'
     | '$'
@@ -49,18 +51,35 @@ export interface TokenConstraint extends BaseRuleConstraint {
   oneOf?: string[];
 }
 
-export interface OfTypeConstraint extends BaseRuleConstraint {
+interface OfTypeConstraint extends BaseRuleConstraint {
   ofType: Rule;
 }
 
-export interface ListOfTypeConstraint extends BaseRuleConstraint {
+interface ListOfTypeConstraint extends BaseRuleConstraint {
   listOfType: RuleName;
 }
 
-export interface PeekConstraint {
-  ifCondition?: RuleConstraint;
+interface PeekConstraint extends BaseRuleConstraint {
+  peek: PeekCondition[];
+}
+
+interface PeekCondition {
+  ifCondition?: TokenConstraint;
   expect: Rule;
   end?: boolean;
 }
 
-export { language as Language };
+export {
+  Language,
+  LanguageType,
+  Rules,
+  Rule,
+  RuleName,
+  RuleConstraint,
+  ConstraintsSet,
+  TokenConstraint,
+  OfTypeConstraint,
+  ListOfTypeConstraint,
+  PeekConstraint,
+  PeekCondition,
+};
