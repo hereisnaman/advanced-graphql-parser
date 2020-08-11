@@ -65,7 +65,7 @@ interface PeekConstraint extends BaseRuleConstraint {
 }
 
 interface PeekCondition {
-  ifCondition?: TokenConstraint;
+  ifCondition: TokenConstraint;
   expect: Rule;
   end?: boolean;
 }

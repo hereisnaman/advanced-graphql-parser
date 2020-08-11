@@ -36,7 +36,9 @@ interface TokenParserRule extends BaseParserRule, TokenConstraint {}
 
 interface OfTypeParserRule extends BaseParserRule, OfTypeConstraint {}
 
-interface ListOfTypeParserRule extends BaseParserRule, ListOfTypeConstraint {}
+interface ListOfTypeParserRule extends BaseParserRule, ListOfTypeConstraint {
+  lookAhead: boolean;
+}
 
 interface PeekParserRule extends BaseParserRule, PeekConstraint {
   index: number;
@@ -88,6 +90,7 @@ export class Parser {
           ...(Language.rules.Document as ListOfTypeConstraint),
           nodeRoot: true,
           expanded: false,
+          lookAhead: false,
           depth: 1,
         },
       ],
@@ -98,13 +101,12 @@ export class Parser {
     console.log('parsing');
     const rule = this.getNextRule();
 
-    if (!rule) return null;
+    if (!rule) return { kind: 'Invalid', rule };
 
     let token;
     if (this.lookAhead().kind === '<EOF>') {
       return { kind: '<EOF>' };
     }
-
     switch (rule.kind) {
       case RuleKind.TOKEN_CONSTRAINT:
         token = this.parseTokenConstraint(rule as TokenParserRule);
@@ -145,15 +147,22 @@ export class Parser {
     const token = this.lookAhead();
 
     if (!this.matchToken(token, rule)) {
-      return { kind: 'Invalid' };
+      return { kind: 'Invalid', rule };
     }
 
     this.advanceToken();
+    this.popMatchedRule();
 
-    console.log('popped 7:', this.state.rules.pop());
+    return token;
+  }
+
+  private popMatchedRule() {
+    const rule = this.state.rules.pop();
+    console.log('popped 7:', rule);
 
     const nextRule = this.getNextRule();
 
+    console.log('\n\n\n\n\n\n', 'Next Rule Mila');
     if (
       nextRule.depth === rule.depth - 1 &&
       nextRule.expanded &&
@@ -161,15 +170,18 @@ export class Parser {
     )
       console.log('popped 8:', this.state.rules.pop(), this.state.rules);
 
-    return token;
+    if (
+      nextRule.depth === rule.depth - 1 &&
+      nextRule.expanded &&
+      nextRule.kind === RuleKind.LIST_OF_TYPE_CONSTRAINT
+    ) {
+      nextRule.expanded = false;
+      nextRule.optional = true;
+      console.log('reseting list of type', nextRule);
+    }
   }
 
   private parseListOfTypeConstraint(rule: ListOfTypeParserRule) {
-    if (rule.expanded) {
-      this.state.rules.pop();
-      return this.parseToken();
-    }
-
     this.pushRule(
       Language.rules[rule.listOfType],
       rule.depth + 1,
@@ -184,7 +196,7 @@ export class Parser {
 
   private parseOfTypeConstraint(rule: OfTypeParserRule) {
     if (rule.expanded) {
-      this.state.rules.pop();
+      this.popMatchedRule();
       return this.parseToken();
     }
     this.pushRule(rule.ofType, rule.depth + 1);
@@ -197,7 +209,7 @@ export class Parser {
 
   private parsePeekConstraint(rule: PeekParserRule) {
     if (rule.expanded) {
-      this.state.rules.pop();
+      this.popMatchedRule();
       return this.parseToken();
     }
     while (!rule.matched && rule.index < rule.peek.length - 1) {
@@ -210,7 +222,7 @@ export class Parser {
       }
 
       let token = this.lookAhead();
-      if (!ifCondition || this.matchToken(token, ifCondition)) {
+      if (ifCondition && this.matchToken(token, ifCondition)) {
         console.log('Matched condition', rule, constraint, token);
         rule.matched = true;
         rule.expanded = true;
@@ -222,12 +234,12 @@ export class Parser {
       }
     }
 
-    return { kind: 'Invalid' };
+    return { kind: 'Invalid', rule };
   }
 
   private parseConstraintsSetRule(rule: ConstraintsSetRule) {
     if (rule.expanded) {
-      this.state.rules.pop();
+      this.popMatchedRule();
       return this.parseToken();
     }
 
@@ -296,28 +308,11 @@ export class Parser {
 
       if (lastPoppedRule?.eatNextOnFail) {
         console.log('popped3 : ', this.state.rules.pop());
-        let i = 0;
-        const log = console.log;
-        global.console.log = (...args) => {
-          i++;
-          if (i < 80) {
-            log(...args);
-          }
-        };
-        //console.log('\n\n\n\n\n', this.state.rules);
       }
     };
 
     const poppedRule = this.state.rules.pop();
     console.log('popped4 : ', poppedRule);
-
-    /*
-    if (
-      poppedRule.expanded &&
-      poppedRule.kind === RuleKind.LIST_OF_TYPE_CONSTRAINT
-    )
-      return;
-      */
 
     let popped = 0;
     let nextRule = this.getNextRule();
@@ -379,6 +374,7 @@ export class Parser {
           name,
           depth,
           expanded: false,
+          lookAhead: false,
           kind: RuleKind.LIST_OF_TYPE_CONSTRAINT,
         });
         break;
