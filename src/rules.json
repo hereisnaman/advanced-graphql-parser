@@ -63,7 +63,11 @@
           "ifCondition": "OperationType",
           "expect": [
             "OperationType",
-            { "ofType": "Name", "optional": true, "saveAs": "name" },
+            {
+              "ofType": "Name",
+              "optional": true,
+              "tokenName": "OperationName"
+            },
             { "ofType": "VariableDefinitions", "optional": true },
             { "ofType": "Directives", "optional": true },
             "SelectionSet"
@@ -75,7 +79,6 @@
       "token": "Name",
       "oneOf": ["query", "mutation", "subscription"]
     },
-
     "SelectionSet": [
       { "token": "{" },
       { "listOfType": "Selection" },
@@ -96,7 +99,7 @@
 
     "Field": [
       { "ofType": "Alias", "optional": true, "eatNextOnFail": true },
-      { "token": "Name" },
+      { "token": "Name", "tokenName": "FieldName" },
       { "ofType": "Arguments", "optional": true },
       { "ofType": "Directives", "optional": true },
       { "ofType": "SelectionSet", "optional": true }
@@ -107,9 +110,13 @@
       { "listOfType": "Argument" },
       { "token": ")" }
     ],
-    "Argument": ["Name", { "token": ":" }, "Value"],
+    "Argument": [
+      { "token": "Name", "tokenName": "ArgumentName" },
+      { "token": ":" },
+      "Value"
+    ],
 
-    "Alias": ["Name", { "token": ":" }],
+    "Alias": [{ "token": "Name", "tokenName": "AliasName" }, { "token": ":" }],
 
     "Fragment": [
       { "token": "..." },
@@ -140,7 +147,11 @@
       { "ofType": "Directives", "optional": true }
     ],
     "FragmentDefinition": [
-      { "token": "Name", "ofValue": "fragment" },
+      {
+        "token": "Name",
+        "ofValue": "fragment",
+        "tokenName": "FragmentDefinitionKeyword"
+      },
       "FragmentName",
       "TypeCondition",
       { "ofType": "Directives", "optional": true },
@@ -151,7 +162,10 @@
       "butNot": "on"
     },
 
-    "TypeCondition": [{ "token": "Name", "ofValue": "on" }, "Name"],
+    "TypeCondition": [
+      { "token": "Name", "ofValue": "on" },
+      { "token": "Name", "tokenName": "TypeName" }
+    ],
 
     "InlineFragment": [
       { "ofType": "TypeCondition", "optional": true },
@@ -262,11 +276,23 @@
       ]
     },
 
-    "BooleanValue": { "token": "Name", "oneOf": ["true", "false"] },
+    "BooleanValue": {
+      "token": "Name",
+      "oneOf": ["true", "false"],
+      "tokenName": "BooleanValue"
+    },
 
-    "NullValue": { "token": "Name", "ofValue": "null" },
+    "NullValue": {
+      "token": "Name",
+      "ofValue": "null",
+      "tokenName": "NullValue"
+    },
 
-    "EnumValue": { "token": "Name", "butNot": ["null", "true", "false"] },
+    "EnumValue": {
+      "token": "Name",
+      "butNot": ["null", "true", "false"],
+      "tokenName": "EnumValue"
+    },
 
     "ListValue": [
       { "token": "[" },
@@ -301,11 +327,13 @@
     ],
     "DefaultValue": [{ "token": "=" }, "ConstValue"],
 
+    "TypeName": { "token": "Name", "tokenName": "TypeName" },
+
     "Type": {
       "peek": [
         {
           "ifCondition": { "token": "Name" },
-          "expect": ["Name", { "token": "!", "optional": true }]
+          "expect": ["TypeName", { "token": "!", "optional": true }]
         },
         {
           "ifCondition": { "token": "[" },
@@ -322,13 +350,13 @@
 
     "Directives": { "listOfType": "Directive" },
     "Directive": [
-      { "token": "@" },
-      "Name",
+      { "token": "@", "tokenName": "DirectiveName" },
+      { "token": "Name", "tokenName": "DirectiveName" },
       { "ofType": "Arguments", "optional": true }
     ],
 
     "TypeSystemDefinition": [
-      { "ofType": "StringValue", "optional": true },
+      { "ofType": "Description", "optional": true },
       {
         "peek": [
           {
@@ -446,13 +474,21 @@
     },
 
     "SchemaDefinition": [
-      { "token": "Name", "ofValue": "schema" },
+      {
+        "token": "Name",
+        "ofValue": "schema",
+        "tokenName": "SchemaDefinitionKeyword"
+      },
       { "ofType": "Directives", "optional": true },
       { "token": "{" },
       { "listOfType": "RootOperationTypeDefinition" },
       { "token": "}" }
     ],
-    "RootOperationTypeDefinition": ["OperationType", "Name"],
+    "RootOperationTypeDefinition": [
+      "OperationType",
+      { "token": ":" },
+      { "token": "Name", "tokenName": "OperationTypeDefinationName" }
+    ],
 
     "SchemaExtension": [
       { "token": "Name", "ofValue": "extend" },
@@ -490,36 +526,56 @@
 
     "ScalarTypeDefinition": [
       { "ofType": "Description", "optional": true },
-      { "token": "Name", "ofValue": "scalar" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "scalar",
+        "tokenName": "ScalarDefinitionKeyword"
+      },
+      "TypeName",
       { "ofType": "Directives", "optional": true }
     ],
 
     "ScalarTypeExtension": [
-      { "token": "Name", "ofValue": "extend" },
-      { "token": "Name", "ofValue": "scalar" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "extend",
+        "tokenName": "ExtendDefinitionKeyword"
+      },
+      {
+        "token": "Name",
+        "ofValue": "scalar",
+        "tokenName": "ScalarDefinitionKeyword"
+      },
+      "TypeName",
       "Directives"
     ],
 
     "ObjectTypeDefinition": [
       { "ofType": "Description", "optional": true },
-      { "token": "Name", "ofValue": "type" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "type",
+        "tokenName": "TypeDefinitionKeyword"
+      },
+      "TypeName",
       { "ofType": "ImplementsInterfaces", "optional": true },
       { "ofType": "Directives", "optional": true },
       { "ofType": "FieldsDefinition", "optional": true }
     ],
     "ImplementsInterfaces": [
-      { "token": "Name", "ofValue": "implements" },
+      {
+        "token": "Name",
+        "ofValue": "implements",
+        "tokenName": "ImplementsKeyword"
+      },
       { "token": "&", "optional": true },
-      "Name",
+      "TypeName",
       {
         "listOfType": "ImplementsAdditionalInterfaceName",
         "optional": true
       }
     ],
-    "ImplementsAdditionalInterfaceName": [{ "token": "&" }, "Name"],
+    "ImplementsAdditionalInterfaceName": [{ "token": "&" }, "TypeName"],
     "FieldsDefinition": [
       { "token": "{" },
       { "listOfType": "FieldDefinition" },
@@ -527,7 +583,7 @@
     ],
     "FieldDefinition": [
       { "ofType": "Description", "optional": true },
-      "Name",
+      { "token": "Name", "tokenName": "AliasName" },
       { "ofType": "ArgumentsDefinition", "optional": true },
       { "token": ":" },
       "Type",
@@ -541,7 +597,7 @@
     ],
     "InputValueDefinition": [
       { "ofType": "Description", "optional": true },
-      "Name",
+      { "tokenName": "Name", "tokenName": "ArgumentName" },
       { "token": ":" },
       "Type",
       { "ofType": "DefaultValue", "optional": true },
@@ -549,9 +605,17 @@
     ],
 
     "ObjectTypeExtension": [
-      { "token": "Name", "ofValue": "extend" },
-      { "token": "Name", "ofValue": "type" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "extend",
+        "tokenName": "ExtendDefinitionKeyword"
+      },
+      {
+        "token": "Name",
+        "ofValue": "type",
+        "tokenName": "TypeDefinitionKeyword"
+      },
+      "TypeName",
       {
         "peek": [
           {
@@ -593,16 +657,28 @@
 
     "InterfaceTypeDefinition": [
       { "ofType": "Description", "optional": true },
-      { "token": "Name", "ofValue": "interface" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "interface",
+        "tokenName": "InterfaceDefinitionKeyword"
+      },
+      "TypeName",
       { "ofType": "Directives", "optional": true },
       { "ofType": "FieldsDefinition", "optional": true }
     ],
 
     "InterfaceTypeExtension": [
-      { "token": "Name", "ofValue": "extend" },
-      { "token": "Name", "ofValue": "interface" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "extend",
+        "tokenName": "ExtendDefinitionKeyword"
+      },
+      {
+        "token": "Name",
+        "ofValue": "interface",
+        "tokenName": "InterfaceDefinitionKeyword"
+      },
+      "TypeName",
       {
         "peek": [
           {
@@ -622,8 +698,12 @@
 
     "UnionTypeDefinition": [
       { "ofType": "Description", "optional": true },
-      { "token": "Name", "ofValue": "union" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "union",
+        "tokenName": "UnionDefinitionKeyword"
+      },
+      "TypeName",
       { "ofType": "Directives", "optional": true },
       { "ofType": "UnionMemberTypes", "optional": true }
     ],
@@ -638,12 +718,20 @@
       }
     ],
 
-    "UnionMemberAditionTypeName": [{ "token": "|" }, "Name"],
+    "UnionMemberAditionTypeName": [{ "token": "|" }, "TypeName"],
 
     "UnionTypeExtension": [
-      { "token": "Name", "ofValue": "extend" },
-      { "token": "Name", "ofValue": "union" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "extend",
+        "tokenName": "ExtendDefinitionKeyword"
+      },
+      {
+        "token": "Name",
+        "ofValue": "union",
+        "tokenName": "UnionDefinitionKeyword"
+      },
+      "TypeName",
       {
         "peek": [
           {
@@ -663,8 +751,12 @@
 
     "EnumTypeDefinition": [
       { "ofType": "Description", "optional": true },
-      { "token": "Name", "ofValue": "enum" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "enum",
+        "tokenName": "EnumDefinitionKeyword"
+      },
+      "TypeName",
       { "ofType": "Directives", "optional": true },
       { "ofType": "EnumValuesDefinition", "optional": true }
     ],
@@ -680,9 +772,17 @@
     ],
 
     "EnumTypeExtension": [
-      { "token": "Name", "ofValue": "extend" },
-      { "token": "Name", "ofValue": "enum" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "extend",
+        "tokenName": "ExtendDefinitionKeyword"
+      },
+      {
+        "token": "Name",
+        "ofValue": "enum",
+        "tokenName": "EnumDefinitionKeyword"
+      },
+      "TypeName",
       {
         "peek": [
           {
@@ -702,8 +802,12 @@
 
     "InputObjectTypeDefinition": [
       { "ofType": "Description", "optional": true },
-      { "token": "Name", "ofValue": "input" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "input",
+        "tokenName": "InputDefinitionKeyword"
+      },
+      "TypeName",
       { "ofType": "Directives", "optional": true },
       { "ofType": "InputFieldsDefinition", "optional": true }
     ],
@@ -714,9 +818,17 @@
     ],
 
     "InputObjectTypeExtension": [
-      { "token": "Name", "ofValue": "extend" },
-      { "token": "Name", "ofValue": "enum" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "extend",
+        "tokenName": "ExtendDefinitionKeyword"
+      },
+      {
+        "token": "Name",
+        "ofValue": "input",
+        "tokenName": "InputDefinitionKeyword"
+      },
+      "TypeName",
       {
         "peek": [
           {
@@ -736,11 +848,15 @@
 
     "DirectiveDefinition": [
       { "ofType": "Description", "optional": true },
-      { "token": "Name", "ofValue": "directive" },
-      { "token": "@" },
-      "Name",
+      {
+        "token": "Name",
+        "ofValue": "directive",
+        "tokenName": "DirectiveDefinitionKeyword"
+      },
+      { "token": "@", "tokenName": "DirectiveName" },
+      { "token": "Name", "tokenName": "DirectiveName" },
       { "ofType": "ArgumentsDefinition", "optional": true },
-      { "token": "Name", "ofValue": "on" },
+      { "token": "Name", "ofValue": "on", "tokenName": "OnKeyword" },
       "DirectiveLocations"
     ],
     "DirectiveLocations": [
@@ -774,7 +890,8 @@
         "FRAGMENT_DEFINITION",
         "FRAGMENT_SPREAD",
         "INLINE_FRAGMENT"
-      ]
+      ],
+      "tokenName": "EnumValue"
     },
     "TypeSystemDirectiveLocation": {
       "token": "Name",
@@ -790,7 +907,8 @@
         "ENUM_VALUE",
         "INPUT_OBJECT",
         "INPUT_FIELD_DEFINITION"
-      ]
+      ],
+      "tokenName": "EnumValue"
     }
   }
 }

@@ -8,7 +8,6 @@ import {
   Styles,
   ParserRule,
   ParserState,
-  ParserConfig,
   Rule,
   RuleName,
   RuleConstraint,
@@ -28,22 +27,15 @@ export class Parser {
   state: ParserState;
   lexer: Lexer;
   styles: Styles;
-  config: ParserConfig;
 
   constructor({
-    state = Parser.startState(),
-    styles = {},
-    config = {},
+    state = Parser.initialState(),
     source,
   }: {
     state?: ParserState;
-    styles?: Styles;
-    config?: ParserConfig;
     source: string;
   }) {
     this.state = state;
-    this.styles = styles;
-    this.config = { tabSize: 2, ...config };
     this.lexer = new Lexer(new Source(source));
   }
 
@@ -60,40 +52,25 @@ export class Parser {
           step: 1,
         },
       ],
-      levels: [],
-      indentLevel: undefined,
       get kind(): string {
         return this.rules[this.rules.length - 1]?.state || '';
       },
       get step(): number {
         return this.rules[this.rules.length - 1]?.step || 0;
       },
+      prevState: null,
     };
-  }
-
-  sol(): boolean {
-    return (
-      this.lexer.source.locationOffset.line === 1 &&
-      this.lexer.source.locationOffset.column === 1
-    );
   }
 
   parseToken(): Token {
     const rule = this.getNextRule();
 
-    if (this.sol()) {
-      this.state.indentLevel = Math.floor(
-        this.indentation() / this.config.tabSize,
-      );
-    }
-
-    if (!rule)
-      return { kind: TokenKind.INVALID, style: this.styles[TokenKind.INVALID] };
+    if (!rule) return { kind: TokenKind.INVALID };
 
     let token;
 
     if (this.lookAhead().kind === '<EOF>') {
-      return { kind: TokenKind.EOF, style: this.styles[TokenKind.EOF] };
+      return { kind: TokenKind.EOF };
     }
 
     switch (rule.kind) {
@@ -129,33 +106,13 @@ export class Parser {
     return token;
   }
 
-  indentation(): number {
-    const match = this.lexer.source.body.match(/\s*/);
-    let indent = 0;
-
-    if (match && match.length === 0) {
-      const whitespaces = match[0];
-      let pos = 0;
-      while (whitespaces.length > pos) {
-        if (whitespaces.charCodeAt(pos) === 9) {
-          indent += 2;
-        } else {
-          indent++;
-        }
-        pos++;
-      }
-    }
-
-    return indent;
-  }
-
   private parseTokenConstraint(rule: TokenParserRule): Token {
     rule.expanded = true;
 
     const token: LexerToken = this.lookAhead();
 
     if (!this.matchToken(token, rule)) {
-      return { kind: TokenKind.INVALID };
+      return { kind: 'Invalid', rule };
     }
 
     this.advanceToken();
@@ -170,7 +127,6 @@ export class Parser {
       rule.depth + 1,
       rule.listOfType,
       1,
-      rule.state,
     );
 
     rule.expanded = true;
@@ -186,9 +142,7 @@ export class Parser {
       return this.parseToken();
     }
 
-    console.log('pushing', rule, rule.tokenName);
-    this.pushRule(rule.ofType, rule.depth + 1, rule.tokenName, 1, rule.state);
-    console.log('pushing of type complete');
+    this.pushRule(rule.ofType, rule.depth + 1, '', 1);
     rule.expanded = true;
 
     const token = this.parseToken();
@@ -215,7 +169,7 @@ export class Parser {
       if (ifCondition && this.matchToken(token, ifCondition)) {
         rule.matched = true;
         rule.expanded = true;
-        this.pushRule(constraint.expect, rule.depth + 1, '', 1, rule.state);
+        this.pushRule(constraint.expect, rule.depth + 1, '', 1);
 
         token = this.parseToken();
 
@@ -233,13 +187,7 @@ export class Parser {
     }
 
     for (let index = rule.constraints.length - 1; index >= 0; index--) {
-      this.pushRule(
-        rule.constraints[index],
-        rule.depth + 1,
-        '',
-        index + 1,
-        rule.state,
-      );
+      this.pushRule(rule.constraints[index], rule.depth + 1, '', index + 1);
     }
     rule.expanded = true;
 
@@ -289,39 +237,21 @@ export class Parser {
   }
 
   private transformLexerToken(lexerToken: LexerToken, rule: ParserRule): Token {
-    let token;
+    const token = {};
 
-    if (lexerToken.kind === '<EOF>' || lexerToken.value !== undefined) {
-      token = {
-        kind: lexerToken.kind,
-        value: lexerToken.value,
-        style:
-          this.styles[(rule as TokenParserRule).tokenName] ||
-          this.styles[rule.name] ||
-          this.styles[lexerToken.kind],
-      };
+    if (token.kind === '<EOF>' || token.value !== undefined) {
+      token.kind = lexerToken.kind;
+      token.value = lexerToken.value;
     } else {
-      token = {
-        kind: TokenKind.PUNCTUATION,
-        value: lexerToken.kind,
-        style:
-          this.styles[(rule as TokenParserRule).tokenName] ||
-          this.styles[rule.name] ||
-          this.styles[TokenKind.PUNCTUATION],
-      };
-
-      if (/^[{([]/.test(token.value)) {
-        if (this.state.indentLevel !== undefined) {
-          this.state.levels = this.state.levels.concat(
-            this.state.indentLevel + 1,
-          );
-        }
-      } else if (/^[})\]]/.test(token.value)) {
-        this.state.levels.pop();
-      }
+      token.kind = TokenKind.PUNCTUATION;
+      token.value = lexerToken.kind;
     }
 
-    return token;
+    if (this.styles && !!this.styles[rule.name]) {
+      token.style = this.styles[rule.name];
+    }
+
+    return token as Token;
   }
 
   private getNextRule(): ParserRule | null {
@@ -391,23 +321,16 @@ export class Parser {
     }
   }
 
-  pushRule(
-    rule: Rule,
-    depth: number,
-    name: string = '',
-    step?: number,
-    state?: string,
-  ) {
+  pushRule(rule: Rule, depth: number, name: string = '', step?: number) {
     switch (this.getRuleKind(rule)) {
       case RuleKind.RULE_NAME:
         this.pushRule(
           Language.rules[rule as string],
           depth,
-          name || (rule as string),
+          rule as string,
           step,
-          state,
         );
-        break;
+        return;
       case RuleKind.CONSTRAINTS_SET:
         this.state.rules.push({
           name,
@@ -416,7 +339,7 @@ export class Parser {
           constraints: rule as ConstraintsSet,
           constraintsSet: true,
           kind: RuleKind.CONSTRAINTS_SET_ROOT,
-          state: name || state || this.getNextRule().state,
+          state: name || this.getNextRule().state,
           step: step || this.getNextRule().step + 1,
         });
         break;
@@ -428,7 +351,7 @@ export class Parser {
           depth,
           expanded: false,
           kind: RuleKind.OF_TYPE_CONSTRAINT,
-          state: name || state || this.getNextRule().state,
+          state: name || this.getNextRule().state,
           step: step || this.getNextRule().step + 1,
         });
         break;
@@ -439,21 +362,21 @@ export class Parser {
           name,
           depth,
           expanded: false,
+          lookAhead: false,
           kind: RuleKind.LIST_OF_TYPE_CONSTRAINT,
-          state: name || state || this.getNextRule().state,
+          state: name || this.getNextRule().state,
           step: step || this.getNextRule().step + 1,
         });
         break;
       case RuleKind.TOKEN_CONSTRAINT:
         rule = rule as TokenConstraint;
-        console.log('pushing token', rule, name);
         this.state.rules.push({
-          ...rule,
           name,
+          ...rule,
           depth,
           expanded: false,
           kind: RuleKind.TOKEN_CONSTRAINT,
-          state: rule.tokenName || state || this.getNextRule().state,
+          state: this.getNextRule().state,
           step: step || this.getNextRule().step + 1,
         });
         break;
@@ -467,7 +390,6 @@ export class Parser {
           matched: false,
           expanded: false,
           kind: RuleKind.PEEK_CONSTRAINT,
-          state: state || this.getNextRule().state,
           step: step || this.getNextRule().step + 1,
         });
         break;
